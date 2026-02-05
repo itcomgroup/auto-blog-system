@@ -1,0 +1,71 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const posts = await Astro.glob('./blog/*.md');
+const sortedPosts = posts.sort((a, b) => 
+  new Date(b.frontmatter.date) - new Date(a.frontmatter.date)
+);
+---
+
+<BaseLayout title="Автоблог | Главная">
+  <main style="max-width: 800px; margin: 0 auto; padding: 2rem 1rem;">
+    <header style="margin-bottom: 3rem; text-align: center;">
+      <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">🚀 Автоблог</h1>
+      <p style="color: var(--color-text-secondary);">
+        Блог, созданный из сессий с Claude Code
+      </p>
+    </header>
+
+    <div style="margin-bottom: 2rem;">
+      <a 
+        href="/rss.xml" 
+        style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;"
+      >
+        📡 RSS
+      </a>
+    </div>
+
+    <section>
+      <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem;">Последние статьи</h2>
+      
+      <div style="display: flex; flex-direction: column; gap: 2rem;">
+        {sortedPosts.map(post => (
+          <article 
+            style="border-bottom: 1px solid var(--color-border); padding-bottom: 2rem;"
+          >
+            <h3 style="margin-bottom: 0.5rem; font-size: 1.3rem;">
+              <a href={post.url} style="color: var(--color-text);">
+                {post.frontmatter.title}
+              </a>
+            </h3>
+            
+            <div style="color: var(--color-text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">
+              {new Date(post.frontmatter.date).toLocaleDateString('ru-RU')} 
+              {post.frontmatter.author && `| ${post.frontmatter.author}`}
+            </div>
+            
+            <p style="color: var(--color-text-secondary); margin-bottom: 0.75rem;">
+              {post.frontmatter.description}
+            </p>
+            
+            {post.frontmatter.tags && (
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                {post.frontmatter.tags.map(tag => (
+                  <span 
+                    style="background: var(--color-code-bg); padding: 0.2rem 0.6rem; border-radius: 3px; font-size: 0.85rem;"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--color-border); text-align: center; color: var(--color-text-secondary); font-size: 0.9rem;">
+      <p>Создано с помощью Claude Code • {new Date().getFullYear()}</p>
+    </footer>
+  </main>
+</BaseLayout>

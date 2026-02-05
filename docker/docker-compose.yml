@@ -1,0 +1,179 @@
+version: '3.8'
+
+# Auto Blog System - Docker Compose Configuration
+# Для развёртывания на VPS через Server Agent
+
+services:
+  # Основное приложение
+  auto-blog:
+    build:
+      context: ../app
+      dockerfile: ../docker/Dockerfile
+    image: auto-blog:latest
+    container_name: auto-blog-app
+    restart: unless-stopped
+    
+    # Пользователь (безопасность)
+    user: "1001:1001"
+    
+    # Переменные окружения
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - TZ=UTC
+    
+    # Файл с секретами
+    env_file:
+      - ../app/.env
+    
+    # Тома (данные сохраняются)
+    volumes:
+      # Данные приложения
+      - app-data:/app/data
+      - app-logs:/app/logs
+      - app-output:/app/output
+      - app-backups:/app/backups
+      
+      # Логи AI агентов (read-only, хост -> контейнер)
+      # Настройте пути под свою систему
+      - ~/.claude/logs:/app/logs/claude:ro
+      - ~/.opencode/logs:/app/logs/opencode:ro
+      
+      # Кэш npm (для ускорения)
+      - npm-cache:/home/autoblog/.npm
+    
+    # Сеть
+    networks:
+      - auto-blog-network
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "scripts/health-check.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Логирование
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Ограничения ресурсов
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Опционально: Cron сервис для автоматизации
+  # (можно использовать вместо хостового cron)
+  auto-blog-cron:
+    build:
+      context: ../app
+      dockerfile: ../docker/Dockerfile
+    image: auto-blog:latest
+    container_name: auto-blog-cron
+    restart: unless-stopped
+    
+    user: "1001:1001"
+    
+    env_file:
+      - ../app/.env
+    
+    volumes:
+      - app-data:/app/data
+      - app-logs:/app/logs
+      - app-output:/app/output
+      - ~/.claude/logs:/app/logs/claude:ro
+      - ~/.opencode/logs:/app/logs/opencode:ro
+    
+    networks:
+      - auto-blog-network
+    
+    # Переопределяем команду для cron
+    command: >
+      sh -c "
+        echo '0 9 * * * cd /app && npm run extract-ideas' | crontab - &&
+        echo '0 2 * * * /app/scripts/backup.sh' | crontab - &&
+        crond -f
+      "
+    
+    profiles:
+      - cron  # Запускать только явно: docker-compose --profile cron up
+
+  # Опционально: Nginx для веб-сервера
+  nginx:
+    image: nginx:alpine
+    container_name: auto-blog-nginx
+    restart: unless-stopped
+    
+    ports:
+      - "80:80"
+      - "443:443"
+    
+    volumes:
+      # Статические файлы сайта
+      - app-output:/usr/share/nginx/html:ro
+      
+      # Конфигурация Nginx
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      
+      # SSL сертификаты (Let's Encrypt)
+      - ./config/nginx/ssl:/etc/nginx/ssl:ro
+    
+    networks:
+      - auto-blog-network
+    
+    depends_on:
+      - auto-blog
+    
+    profiles:
+      - web  # Запускать только с веб-сервером
+
+# Тома (персистентность данных)
+volumes:
+  app-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/auto-blog/data/app
+  
+  app-logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/auto-blog/data/logs
+  
+  app-output:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/auto-blog/data/articles
+  
+  app-backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/auto-blog/data/backups
+  
+  npm-cache:
+    driver: local
+
+# Сеть
+networks:
+  auto-blog-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

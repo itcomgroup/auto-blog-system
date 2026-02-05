@@ -1,0 +1,69 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+export interface Props {
+  title: string;
+  description?: string;
+  date: string;
+  author?: string;
+  tags?: string[];
+}
+
+const { title, description, date, author, tags } = Astro.props;
+---
+
+<BaseLayout title={title} description={description}>
+  <main style="max-width: 800px; margin: 0 auto; padding: 2rem 1rem;">
+    <nav style="margin-bottom: 2rem;">
+      <a href="/" style="font-size: 0.9rem;">← На главную</a>
+    </nav>
+
+    <article>
+      <header style="margin-bottom: 2rem;">
+        <h1 style="font-size: 2rem; margin-bottom: 1rem; line-height: 1.3;">{title}</h1>
+        
+        <div style="color: var(--color-text-secondary); font-size: 0.9rem;">
+          {new Date(date).toLocaleDateString('ru-RU', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}
+          {author && ` • ${author}`}
+        </div>
+        
+        {tags && tags.length > 0 && (
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+            {tags.map(tag => (
+              <span 
+                style="background: var(--color-code-bg); padding: 0.2rem 0.6rem; border-radius: 3px; font-size: 0.85rem;"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </header>
+
+      <div style="line-height: 1.8; font-size: 1.1rem;">
+        <slot />
+      </div>
+
+      <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--color-border);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <a href="/" style="font-size: 0.9rem;">← Все статьи</a>
+          
+          <div style="display: flex; gap: 1rem;">
+            <a 
+              href={`https://t.me/share/url?url=${encodeURIComponent(Astro.url.href)}&text=${encodeURIComponent(title)}`}
+              target="_blank"
+              rel="noopener"
+              style="font-size: 0.9rem;"
+            >
+              Поделиться
+            </a>
+          </div>
+        </div>
+      </footer>
+    </article>
+  </main>
+</BaseLayout>
