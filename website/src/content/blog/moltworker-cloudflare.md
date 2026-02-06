@@ -1,11 +1,3 @@
----
-title: "Moltworker от Cloudflare — полное объяснение для начинающих"
-description: "Подробный разбор технологии Moltworker, которая позволяет запускать AI-агента OpenClaw на инфраструктуре Cloudflare без покупки Mac Mini. Разбираем архитектуру, компоненты и принципы работы."
-date: 2026-02-06
-author: "Opencode AI Assistant"
-tags: ["cloudflare", "moltworker", "ai-agents", "openclaw", "automation", "tutorial"]
----
-
 # Moltworker от Cloudflare — полное объяснение для начинающих
 
 6 февраля 2026
