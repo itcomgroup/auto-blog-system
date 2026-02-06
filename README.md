@@ -8,11 +8,13 @@
 
 ## ✨ Что делает система
 
-1. 🔍 **Извлекает идеи** из логов сессий Claude Code
-2. 🤖 **Генерирует статьи** с research через Exa API
-3. 🧹 **Убирает "аишность"** через 4 параллельных критика
+1. 🔍 **Извлекает идеи** из реальных логов сессий Opencode CLI
+2. 🤖 **Создаёт статьи** на основе реальных команд, кода и решений
+3. 🧹 **Улучшает текст** через 4 параллельных критика
 4. 🌐 **Создаёт сайт** на Astro с SEO-оптимизацией
 5. 📱 **Публикует** в Telegram канал
+
+**⚠️ Важно:** Система создаёт статьи из **реальных сессий работы**, а не генерирует "с потолка". Смотрите [CORRECT_WORKFLOW.md](docs/CORRECT_WORKFLOW.md)
 
 ---
 
@@ -99,24 +101,38 @@ npm run publish-telegram ./output/YYYY-MM-DD-slug/
 
 | Команда | Описание |
 |---------|----------|
-| `npm run extract-ideas` | Извлечь темы из логов |
-| `npm run generate-post "Тема"` | Создать статью |
+| `npm run extract-ideas-opencode` | Извлечь темы из логов Opencode CLI |
+| `npm run generate-post "Тема"` | Создать статью из реальной сессии |
 | `npm run deaify` | Улучшить текст |
 | `npm run publish-telegram` | Опубликовать в TG |
 | `npm run full-pipeline` | Полный цикл |
 | `npm run dev` | Локальный сайт |
 | `npm run build` | Собрать сайт |
 
+### 📝 Правильный workflow
+
+```bash
+# 1. Извлечь реальные темы из сессий
+npm run extract-ideas-opencode -- --days 7
+
+# 2. Посмотреть извлечённые темы
+cat output/ideas-opencode.json | jq '.ideas[].topic'
+
+# 3. Создать статью из конкретной сессии
+npm run generate-post "Название темы из JSON"
+```
+
+**Важно:** Перед генерацией убедитесь, что тема взята из реальной сессии в `~/.local/share/opencode/storage/`. Смотрите [CORRECT_WORKFLOW.md](docs/CORRECT_WORKFLOW.md)
+
 ---
 
 ## 🔧 Переменные окружения (.env)
 
 ```env
-# Обязательные
-ANTHROPIC_API_KEY=sk-ant-...
+# Обязательные - NVIDIA NIM API (для MiniMax M2.1 или LLaMA)
+NVIDIA_API_KEY=nvapi-...
 
-# Опциональные (для полного функционала)
-EXA_API_KEY=exa-...
+# Опциональные (для публикации)
 TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
 TELEGRAM_CHANNEL_ID=@your_channel
 
@@ -124,41 +140,61 @@ TELEGRAM_CHANNEL_ID=@your_channel
 SITE_URL=https://yourblog.com
 SITE_TITLE=Мой Автоблог
 AUTHOR_NAME=Ваше Имя
+OUTPUT_DIR=./output
+WEBSITE_CONTENT_DIR=./website/src/content/blog
+
+# Путь к логам Opencode CLI (опционально)
+OPENCODE_LOGS_DIR=~/.local/share/opencode/storage
 ```
+
+### 📋 Требования
+
+- **Opencode CLI** - логи работы должны быть в `~/.local/share/opencode/storage/`
+- **NVIDIA API ключ** - для генерации статей через MiniMax M2.1 или LLaMA
+- **Node.js 18+** и `npm`
 
 ---
 
 ## 🧠 Архитектура
 
 ```
-Логи Claude Code
+Логи Opencode CLI
+~/.local/share/opencode/storage/
        │
        ▼
-┌──────────────────┐
-│ extract-ideas.js │
-│ • Парсинг логов  │
-│ • Анализ тем     │
-└────────┬─────────┘
+┌──────────────────────┐
+│ extract-ideas-       │
+│ opencode.js          │
+│ • Парсинг JSON       │
+│ • Анализ сессий      │
+└────────┬─────────────┘
          │
          ▼
-┌──────────────────┐
-│ generate-post.js │
-│ • Exa research   │
-│ • Черновик       │
-│ • Deaify         │
-│ • HTML/MD        │
-└────────┬─────────┘
+┌──────────────────────┐
+│ generate-post.js     │
+│ • Реальные сессии    │
+│ • NVIDIA API         │
+│   (MiniMax/LLaMA)    │
+│ • Deaify (4 критика) │
+│ • HTML/MD            │
+└────────┬─────────────┘
          │
          ▼
-┌──────────────────┐
-│ telegram-        │
-│ publisher.js     │
-└────────┬─────────┘
+┌──────────────────────┐
+│ telegram-            │
+│ publisher.js         │
+└────────┬─────────────┘
          │
          ▼
    📱 Telegram
    🌐 Сайт (Astro)
 ```
+
+### Основные изменения v2.0:
+- ✅ **Opencode CLI** вместо Claude Code
+- ✅ **Реальные сессии** вместо Exa research
+- ✅ **NVIDIA NIM API** (MiniMax M2.1 / LLaMA) вместо Anthropic
+- ✅ **30-минутный таймаут** для больших моделей
 
 ---
 
